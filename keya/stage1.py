@@ -1,3 +1,7 @@
+import os
+import sys
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -6,11 +10,15 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import silhouette_score
 import joblib
 
+# Resolve directories dynamically so script works from root or inside keya/
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+DATA_DIR = os.path.join(ROOT_DIR, "goodreads-10k")
+
 # 1. Load the CSV files from your goodreads-10k folder
-DATA_DIR = "goodreads-10k/"
-books = pd.read_csv(DATA_DIR + "books.csv")
-book_tags = pd.read_csv(DATA_DIR + "book_tags.csv")
-tags = pd.read_csv(DATA_DIR + "tags.csv")
+books = pd.read_csv(os.path.join(DATA_DIR, "books.csv"))
+book_tags = pd.read_csv(os.path.join(DATA_DIR, "book_tags.csv"))
+tags = pd.read_csv(os.path.join(DATA_DIR, "tags.csv"))
 
 print(f"Loaded {len(books)} books, {len(book_tags)} book-tag links, and {len(tags)} unique tags.")
 print("Columns in books.csv:", list(books.columns))
@@ -84,15 +92,16 @@ cols_to_save = [
 ]
 # Only keep columns that exist in books
 cols_to_save = [c for c in cols_to_save if c in books.columns]
-books[cols_to_save].to_csv(DATA_DIR + "books_clustered.csv", index=False)
-print("✅ Saved goodreads-10k/books_clustered.csv! Send this to Satya and Sneha.")
+output_clustered_csv = os.path.join(DATA_DIR, "books_clustered.csv")
+books[cols_to_save].to_csv(output_clustered_csv, index=False)
+print(f"Saved {output_clustered_csv}! Ready for Satya and Sneha.")
 
 # 9. Train KNN (Cosine Distance) for Stage 1 Candidate Retrieval
 knn_model = NearestNeighbors(n_neighbors=30, metric="cosine", algorithm="brute")
 knn_model.fit(tfidf_matrix)
 
-# Save artifacts inside keya/ folder (or root)
-joblib.dump(tfidf, "keya/keya_tfidf.joblib")
-joblib.dump(tfidf_matrix, "keya/keya_tfidf_matrix.joblib")
-joblib.dump(knn_model, "keya/keya_knn.joblib")
-print("✅ Saved keya_tfidf.joblib, keya_tfidf_matrix.joblib, and keya_knn.joblib inside keya/!")
+# Save artifacts inside keya/ folder with compress=3
+joblib.dump(tfidf, os.path.join(BASE_DIR, "keya_tfidf.joblib"), compress=3)
+joblib.dump(tfidf_matrix, os.path.join(BASE_DIR, "keya_tfidf_matrix.joblib"), compress=3)
+joblib.dump(knn_model, os.path.join(BASE_DIR, "keya_knn.joblib"), compress=3)
+print("Saved keya_tfidf.joblib, keya_tfidf_matrix.joblib, and keya_knn.joblib inside keya/!")
